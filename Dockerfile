@@ -1,18 +1,19 @@
-FROM php:8.3-cli
+FROM php:8.3-apache
 
 RUN apt-get update && apt-get install -y \
     libicu-dev \
-    libonig-dev \
-    && docker-php-ext-install intl mbstring \
+    && docker-php-ext-install intl \
+    && a2enmod rewrite \
     && rm -rf /var/lib/apt/lists/*
 
-WORKDIR /var/www/html
+COPY . /var/www/html/
 
-COPY . .
+ENV APACHE_DOCUMENT_ROOT=/var/www/html/public
 
-RUN mkdir -p writable/cache writable/logs writable/session writable/uploads \
-    && chmod -R 777 writable
+RUN sed -ri -e 's!/var/www/html!${APACHE_DOCUMENT_ROOT}!g' \
+    /etc/apache2/sites-available/*.conf \
+    /etc/apache2/apache2.conf
 
-ENV PORT=10000
+RUN chown -R www-data:www-data /var/www/html/writable
 
-CMD ["sh", "-c", "php spark serve --host 0.0.0.0 --port ${PORT}"]
+EXPOSE 80
